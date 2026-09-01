@@ -1,8 +1,10 @@
+import uuid
+
 from loading.silver import load_snapshot_to_silver
 
 
-def test_snapshot_silver_update_insert_and_soft_delete(spark, tmp_path):
-    silver_path = str(tmp_path / "silver")
+def test_snapshot_silver_update_insert_and_soft_delete(spark):
+    silver_table = f"workspace.test.orders_{uuid.uuid4().hex}"
 
     initial_data = [
         (1, "Laptop", "Electronics", 1000.0, 10, True),
@@ -23,7 +25,7 @@ def test_snapshot_silver_update_insert_and_soft_delete(spark, tmp_path):
         columns,
     )
 
-    initial_df.write.format("delta").mode("overwrite").save(silver_path)
+    initial_df.write.format("delta").mode("overwrite").saveAsTable(silver_table)
 
     source_data = [
         (1, "Laptop Pro", "Electronics", 1200.0, 8, True),
@@ -40,7 +42,7 @@ def test_snapshot_silver_update_insert_and_soft_delete(spark, tmp_path):
     load_snapshot_to_silver(
         spark,
         source_df,
-        silver_path,
+        silver_table,
         snapshot_ids,
         "product_id",
         [
@@ -52,7 +54,7 @@ def test_snapshot_silver_update_insert_and_soft_delete(spark, tmp_path):
         ],
     )
 
-    result_df = spark.read.format("delta").load(silver_path)
+    result_df = spark.table(silver_table)
 
     result = {row["product_id"]: row for row in result_df.collect()}
 
@@ -70,8 +72,8 @@ def test_snapshot_silver_update_insert_and_soft_delete(spark, tmp_path):
     assert result[3]["is_active"] is True
 
 
-def test_snapshot_silver_reactivates_returning_record(spark, tmp_path):
-    silver_path = str(tmp_path / "silver")
+def test_snapshot_silver_reactivates_returning_record(spark):
+    silver_table = f"workspace.test.orders_{uuid.uuid4().hex}"
 
     initial_data = [
         (1, "Laptop", "Electronics", 1000.0, 10, True),
@@ -92,7 +94,7 @@ def test_snapshot_silver_reactivates_returning_record(spark, tmp_path):
         columns,
     )
 
-    initial_df.write.format("delta").mode("overwrite").save(silver_path)
+    initial_df.write.format("delta").mode("overwrite").saveAsTable(silver_table)
 
     source_data = [
         (1, "Laptop", "Electronics", 1000.0, 10, True),
@@ -109,7 +111,7 @@ def test_snapshot_silver_reactivates_returning_record(spark, tmp_path):
     load_snapshot_to_silver(
         spark,
         source_df,
-        silver_path,
+        silver_table,
         snapshot_ids,
         "product_id",
         [
@@ -121,7 +123,7 @@ def test_snapshot_silver_reactivates_returning_record(spark, tmp_path):
         ],
     )
 
-    result_df = spark.read.format("delta").load(silver_path)
+    result_df = spark.table(silver_table)
 
     result = {row["product_id"]: row for row in result_df.collect()}
 

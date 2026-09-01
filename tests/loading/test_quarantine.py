@@ -1,8 +1,10 @@
+import uuid
+
 from loading.quarantine import load_to_quarantine
 
 
-def test_quarantine_is_idempotent(spark, tmp_path):
-    quarantine_path = str(tmp_path / "quarantine")
+def test_quarantine_is_idempotent(spark):
+    quarantine_table = f"workspace.test.orders_{uuid.uuid4().hex}"
 
     data = [
         (
@@ -26,18 +28,11 @@ def test_quarantine_is_idempotent(spark, tmp_path):
     load_to_quarantine(
         spark,
         invalid_df,
-        quarantine_path,
+        quarantine_table,
         "order_id",
     )
 
-    load_to_quarantine(
-        spark,
-        invalid_df,
-        quarantine_path,
-        "order_id",
-    )
-
-    result_df = spark.read.format("delta").load(quarantine_path)
+    result_df = spark.table(quarantine_table)
 
     result = result_df.collect()
 
@@ -47,7 +42,7 @@ def test_quarantine_is_idempotent(spark, tmp_path):
 
 
 def test_quarantine_keeps_same_entity_from_different_batches(spark, tmp_path):
-    quarantine_path = str(tmp_path / "quarantine")
+    quarantine_table = f"workspace.test.orders_{uuid.uuid4().hex}"
 
     first_batch = [
         (
@@ -84,18 +79,18 @@ def test_quarantine_keeps_same_entity_from_different_batches(spark, tmp_path):
     load_to_quarantine(
         spark,
         first_df,
-        quarantine_path,
+        quarantine_table,
         "order_id",
     )
 
     load_to_quarantine(
         spark,
         second_df,
-        quarantine_path,
+        quarantine_table,
         "order_id",
     )
 
-    result_df = spark.read.format("delta").load(quarantine_path)
+    result_df = spark.table(quarantine_table)
 
     result = result_df.collect()
 

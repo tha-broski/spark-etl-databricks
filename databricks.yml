@@ -1,0 +1,16 @@
+bundle:
+  name: spark-etl-project
+
+include:
+  - resources/*.yml
+
+artifacts:
+  default:
+    type: whl
+    path: .
+    build: python -m pip wheel . -w dist --no-deps
+
+targets:
+  dev:
+    mode: development
+    default: true
