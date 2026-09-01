@@ -31,12 +31,15 @@ Silver  Quarantine
 The Databricks workflow is orchestrated as:
 
 ```text
+tests
+  |
+  v
 precheck
-   |
-   v
+  |
+  v
 etl_pipeline
-   |
-   v
+  |
+  v
 postcheck
 ```
 
@@ -255,36 +258,44 @@ This prevents duplicate ingestion when the pipeline is run multiple times or ret
 Gold datasets are rebuilt from Silver data and use completed orders only.
 
 ### Daily Sales
+
 Grain: `one row per day`
 
 Metrics:
+
 - order count
 - items sold
 - revenue
 - average order value
 
 ### Product Performance
+
 Grain: `one row per product`
 
 Metrics:
+
 - order count
 - items sold
 - revenue
 - average selling price
 
 ### Category Performance
+
 Grain: `one row per category`
 
 Metrics:
+
 - order count
 - items sold
 - revenue
 - average selling price
 
 ### Customer Metrics
+
 Grain: `one row per customer`
 
 Metrics:
+
 - order count
 - items bought
 - total spent
@@ -308,6 +319,7 @@ workspace.silver
 workspace.gold
 workspace.quarantine
 workspace.control
+workspace.test
 ```
 
 Raw input files are stored in:
@@ -322,21 +334,41 @@ Processed datasets are stored as managed Delta tables.
 
 ## Databricks Workflow
 
-The production workflow contains three tasks:
+The production workflow contains four tasks:
 
 ```text
+tests
+  |
+  v
 precheck
-   |
-   v
+  |
+  v
 etl_pipeline
-   |
-   v
+  |
+  v
 postcheck
 ```
+
+### Tests
+
+Runs the automated pytest suite before the pipeline starts.
+
+The test suite covers:
+
+- transformations
+- data quality validation
+- Gold aggregations
+- snapshot Silver loading
+- incremental Silver loading
+- soft delete and reactivation logic
+- quarantine idempotency
+
+If any test fails, the remaining workflow tasks are not started.
 
 ### Precheck
 
 Validates that:
+
 - required raw CSV files are accessible
 - required Unity Catalog schemas exist
 
@@ -360,6 +392,7 @@ Retry handling is enabled for transient failures.
 ### Postcheck
 
 Validates that:
+
 - required Gold tables exist
 - Gold tables are not empty
 - the latest processing status for every source file is `SUCCESS`
@@ -379,12 +412,23 @@ resources/
 ```
 
 The bundle defines:
+
 - workflow tasks
 - task dependencies
 - serverless execution environment
 - retry policy
 - retry delay
 - schedule
+
+The project is packaged as a Python wheel for Databricks execution.
+
+Packaging configuration is defined in:
+
+```text
+pyproject.toml
+```
+
+The Asset Bundle builds the wheel during deployment and installs it in the Databricks job environment together with pytest.
 
 Example `databricks.yml`:
 
@@ -394,6 +438,12 @@ bundle:
 
 include:
   - resources/*.yml
+
+artifacts:
+  default:
+    type: whl
+    path: .
+    build: python -m pip wheel . -w dist --no-deps
 
 targets:
   dev:
@@ -408,14 +458,14 @@ Deploying the bundle creates or updates the Databricks Job from version-controll
 ## Project Structure
 
 ```text
-spark-etl-project/
+spark-etl-databricks/
 ├── databricks.yml
+├── pyproject.toml
 ├── resources/
 │   └── jobs.yml
 ├── src/
 │   ├── config/
-│   │   ├── paths.py
-│   │   └── spark_session.py
+│   │   └── paths.py
 │   ├── control/
 │   │   └── processed_files.py
 │   ├── gold/
@@ -441,8 +491,14 @@ spark-etl-project/
 │   ├── utils/
 │   ├── main.py
 │   ├── precheck.py
-│   └── postcheck.py
+│   ├── postcheck.py
+│   └── run_tests.py
 ├── tests/
+│   ├── conftest.py
+│   ├── gold/
+│   ├── loading/
+│   ├── quality/
+│   └── transformations/
 ├── pytest.ini
 ├── requirements.txt
 └── README.md
@@ -453,6 +509,7 @@ spark-etl-project/
 ## Testing
 
 The project includes tests for:
+
 - transformations
 - data quality rules
 - Gold aggregations
@@ -461,13 +518,9 @@ The project includes tests for:
 - soft delete and reactivation logic
 - quarantine idempotency
 
-Run locally with:
+The Databricks workflow runs the pytest suite as the first task, followed by precheck and postcheck runtime validations.
 
-```bash
-pytest -q
-```
-
-The Databricks workflow also performs runtime validation using precheck and postcheck tasks.
+Tests are executed inside the Databricks job environment with the project installed as a wheel.
 
 ---
 
@@ -496,12 +549,14 @@ silver
 gold
 quarantine
 control
+test
 ```
 
 The Databricks Job executes:
 
 ```text
-precheck
+tests
+-> precheck
 -> etl_pipeline
 -> postcheck
 ```
@@ -513,6 +568,7 @@ The workflow can be triggered manually or by schedule.
 ## Engineering Concepts Demonstrated
 
 This project demonstrates practical use of:
+
 - Medallion Architecture
 - batch ETL
 - snapshot ingestion
@@ -534,10 +590,11 @@ This project demonstrates practical use of:
 - scheduled execution
 - runtime prechecks and postchecks
 - Databricks Asset Bundles
+- Python wheel packaging
 - pytest-based automated testing
 
 ---
 
 ## Project Goal
 
-The project was designed as a portfolio-grade Data Engineering pipeline rather than a minimal tutorial example. The focus is on patterns commonly used in production batch-processing systems: reliable ingestion, state tracking, data quality, Delta Lake upserts, layered data modeling, orchestration, and reproducible Databricks deployment.
+The project was designed as a portfolio-grade Data Engineering pipeline rather than a minimal tutorial example. The focus is on patterns commonly used in production batch-processing systems: reliable ingestion, state tracking, data quality, Delta Lake upserts, layered data modeling, orchestration, automated testing, and reproducible Databricks deployment.
