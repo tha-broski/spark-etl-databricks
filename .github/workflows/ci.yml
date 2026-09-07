@@ -33,3 +33,5 @@ jobs:
         run: pytest -q tests/transformations tests/quality tests/gold
       - name: Build wheel
         run: python -m pip wheel . -w dist --no-deps
+      - name: Install Databricks CLI
+        uses: databricks/setup-cli@v0.9.0
