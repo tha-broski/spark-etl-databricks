@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "spark-etl-project"
+name = "spark-etl-databricks"
 version = "0.1.0"
 description = "PySpark and Delta Lake ETL pipeline for Databricks"
 requires-python = ">=3.11"
