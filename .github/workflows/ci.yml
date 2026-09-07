@@ -35,3 +35,8 @@ jobs:
         run: python -m pip wheel . -w dist --no-deps
       - name: Install Databricks CLI
         uses: databricks/setup-cli@main
+      - name: Validate databricks bundle
+        run: databricks bundle Validate
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
