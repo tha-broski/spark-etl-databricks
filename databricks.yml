@@ -1,5 +1,5 @@
 bundle:
-  name: spark-etl-project
+  name: spark-etl-databricks
 
 include:
   - resources/*.yml
