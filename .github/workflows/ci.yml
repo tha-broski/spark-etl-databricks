@@ -25,6 +25,8 @@ jobs:
           java-version: "17"
       - name: Install dependencies
         run: pip install -r requirements.txt
+      - name: Install test dependencies
+        run: pip install pytest
       - name: Install project
         run: pip install .
       - name: Run CI tests
