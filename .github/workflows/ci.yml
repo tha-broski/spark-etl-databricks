@@ -31,3 +31,5 @@ jobs:
         run: pip install .
       - name: Run CI tests
         run: pytest -q tests/transformations tests/quality tests/gold
+      - name: Build wheel
+        run: python -m pip wheel . -w dist --no-deps
